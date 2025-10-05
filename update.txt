@@ -1,0 +1,808 @@
+// Project: School Auth Frontend (React) — JavaScript + TypeScript-ready scaffold
+// This document provides two parallel setups: **JavaScript (default)** and **TypeScript** variants
+// Pick the folder you prefer: `javascript/` or `typescript/` and follow the README steps inside each.
+
+
+============================
+JAVASCRIPT (Vite + React) — folder: /javascript
+============================
+
+// package.json
+{
+  "name": "school-auth-frontend-js",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.11.2",
+    "brain.js": "^2.0.0-beta.3",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
+
+// README.md (javascript)
+/*
+1) cd javascript
+2) npm install
+3) create .env (see example)
+   VITE_API_BASE_URL=http://localhost:5000/api
+4) npm run dev
+*/
+
+// vite config is not necessary for simple setups.
+
+// src/main.jsx
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import './styles.css'
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+)
+
+// src/App.jsx
+import React from 'react'
+import { Routes, Route, Link } from 'react-router-dom'
+import Login from './components/Login'
+import Signup from './components/Signup'
+import Verify from './components/Verify'
+import Dashboard from './components/Dashboard'
+
+export default function App(){
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white text-gray-900">
+      <header className="max-w-4xl mx-auto p-6 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold">School Portal</h1>
+        <nav className="space-x-4">
+          <Link to="/" className="hover:underline">Login</Link>
+          <Link to="/signup" className="hover:underline">Sign up</Link>
+        </nav>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6">
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </main>
+
+      <footer className="text-center p-6 text-sm text-gray-500">
+        © School Portal • built with ❤️ • includes a tiny brain.js demo
+      </footer>
+    </div>
+  )
+}
+
+// src/services/api.js
+import axios from 'axios'
+
+const BASE = import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api'
+
+const client = axios.create({
+  baseURL: BASE,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+export default client
+
+// src/components/Login.jsx
+import React, {useState} from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Login(){
+  const nav = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleSubmit = async (e) =>{
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try{
+      const res = await api.post('/auth/signin', { email, password })
+      console.log('login success', res.data)
+      // store token client-side if provided (optional), backend already sets cookie
+      if(res.data?.token) localStorage.setItem('token', res.data.token)
+      nav('/dashboard')
+    }catch(err){
+      console.error(err)
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false)}
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Student Login</h2>
+      <p className="text-sm text-gray-600 mb-4">Use your school email to sign in.</p>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="you@school.edu" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input required type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="••••••••" />
+        </div>
+
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex items-center justify-between">
+          <button className="px-4 py-2 rounded bg-sky-600 text-white font-semibold" disabled={loading}>{loading? 'Signing...' : 'Sign in'}</button>
+
+          <a href="/signup" className="text-sm text-sky-600 hover:underline">Create account</a>
+        </div>
+      </form>
+
+      <div className="mt-6 text-xs text-gray-500">By signing in you agree to the school's acceptable use policy.</div>
+    </div>
+  )
+}
+
+// src/components/Signup.jsx
+import React, {useState} from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Signup(){
+  const nav = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
+
+  const submit = async (e) =>{
+    e.preventDefault()
+    setLoading(true); setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/signup', { email, password })
+      setMessage(res.data?.message || 'Account created')
+      nav('/verify', { state: { email } })
+    }catch(err){
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false) }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Create an account</h2>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">School Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="student@school.edu" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input required minLength={6} type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="Create a password" />
+        </div>
+
+        {message && <div className="text-green-700 text-sm">{message}</div>}
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className="px-4 py-2 rounded bg-green-600 text-white font-semibold" disabled={loading}>{loading? 'Creating...' : 'Sign up'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// src/components/Verify.jsx
+import React, {useState} from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Verify(){
+  const loc = useLocation()
+  const nav = useNavigate()
+  const initialEmail = loc.state?.email || ''
+  const [email, setEmail] = useState(initialEmail)
+  const [code, setCode] = useState('')
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const sendCode = async () =>{
+    setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/sendVerificationEmail', { email })
+      setMessage(res.data?.message || 'Code sent')
+    }catch(err){
+      setError(err.response?.data?.message || err.message)
+    }
+  }
+
+  const submit = async (e) =>{
+    e.preventDefault()
+    setLoading(true); setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/verifyCode', { email, providedCode: code })
+      setMessage(res.data?.message || 'Verified')
+      nav('/')
+    }catch(err){
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false) }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Verify your account</h2>
+      <p className="text-sm text-gray-600">We sent a verification code to your school email. If you didn't receive it, you can resend.</p>
+
+      <form onSubmit={submit} className="space-y-4 mt-4">
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Verification Code</label>
+          <input required type="text" value={code} onChange={(e)=>setCode(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="6-digit code" />
+        </div>
+
+        {message && <div className="text-green-700 text-sm">{message}</div>}
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex justify-between items-center">
+          <button type="button" onClick={sendCode} className="px-3 py-2 rounded bg-yellow-500 text-white">Resend code</button>
+          <button className="px-4 py-2 rounded bg-sky-600 text-white" disabled={loading}>{loading? 'Verifying...' : 'Verify'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// src/components/Dashboard.jsx
+import React, {useEffect, useState} from 'react'
+import api from '../services/api'
+import BrainDemo from '../brainModel'
+
+export default function Dashboard(){
+  const [user, setUser] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const res = await api.get('/users'); // adjust endpoint if needed
+        setUser(res.data?.data?.[0] || null)
+      }catch(err){
+        setError(err.response?.data?.message || err.message)
+      }
+    })()
+  },[])
+
+  return (
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow p-6 space-y-6">
+      <h2 className="text-2xl font-semibold">Dashboard</h2>
+      {error && <div className="text-red-600">{error}</div>}
+      <div>
+        <h3 className="font-medium">Welcome{user? `, ${user.email}` : ''}</h3>
+        <p className="text-sm text-gray-600">This is a simple student dashboard for a school-themed app.</p>
+      </div>
+
+      <section>
+        <h4 className="font-semibold mb-2">Tiny AI demo (brain.js)</h4>
+        <BrainDemo />
+      </section>
+
+      <div className="flex gap-3">
+        <button onClick={async ()=>{ await api.post('/auth/signout'); window.location.href='/' }} className="px-3 py-2 bg-red-500 text-white rounded">Sign out</button>
+      </div>
+    </div>
+  )
+}
+
+// src/brainModel.jsx
+import React, {useState} from 'react'
+import { NeuralNetwork } from 'brain.js'
+
+export default function BrainDemo(){
+  const [trained, setTrained] = useState(false)
+  const [result, setResult] = useState(null)
+
+  const data = [
+    { input: { hours: 0 }, output: { fail: 1 } },
+    { input: { hours: 1 }, output: { fail: 1 } },
+    { input: { hours: 2 }, output: { pass: 1 } },
+    { input: { hours: 3 }, output: { pass: 1 } },
+    { input: { hours: 4 }, output: { pass: 1 } },
+    { input: { hours: 0.5 }, output: { fail: 1 } }
+  ]
+
+  const train = () =>{
+    const net = new NeuralNetwork({ hiddenLayers: [3] })
+    net.train(data, { log: false, iterations: 2000 })
+    const json = net.toJSON()
+    localStorage.setItem('school-ai-model', JSON.stringify(json))
+    setTrained(true)
+    alert('Model trained and saved locally. Try predictions below.')
+  }
+
+  const predict = (hours)=>{
+    const raw = localStorage.getItem('school-ai-model')
+    if(!raw){ alert('Train model first'); return }
+    const net = new NeuralNetwork()
+    net.fromJSON(JSON.parse(raw))
+    const out = net.run({ hours: Number(hours) })
+    setResult(out)
+  }
+
+  return (
+    <div className="p-4 border rounded space-y-3">
+      <div className="flex gap-2">
+        <button onClick={train} className="px-3 py-2 bg-indigo-600 text-white rounded">Train model</button>
+        <button onClick={()=>{ localStorage.removeItem('school-ai-model'); setTrained(false); setResult(null) }} className="px-3 py-2 bg-gray-200 rounded">Reset</button>
+      </div>
+
+      <div className="mt-2">
+        <label className="text-sm">Hours studied (0–6)</label>
+        <div className="flex gap-2 mt-1">
+          <input id="hoursInput" type="number" defaultValue={2} min={0} max={12} step={0.1} className="rounded border px-2 py-1" />
+          <button onClick={()=>predict(document.getElementById('hoursInput').value)} className="px-3 py-2 bg-sky-600 text-white rounded">Predict</button>
+        </div>
+      </div>
+
+      {result && (
+        <div className="text-sm">Prediction: <strong>{result.pass > result.fail ? 'Likely to pass' : 'Likely to fail'}</strong> — raw: {JSON.stringify(result)}</div>
+      )}
+
+      <div className="text-xs text-gray-500">This is a toy demo of brain.js running in the browser. It trains on a tiny dataset and saves the model to localStorage.</div>
+    </div>
+  )
+}
+
+// src/styles.css
+:root{--bg:#f8fafc}
+body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0}
+@media (min-width:768px){
+  .max-w-4xl{max-width:64rem}
+  .max-w-3xl{max-width:48rem}
+  .max-w-2xl{max-width:36rem}
+}
+
+
+============================
+TYPESCRIPT (Vite + React + TS) — folder: /typescript
+============================
+
+// package.json
+{
+  "name": "school-auth-frontend-ts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.11.2",
+    "brain.js": "^2.0.0-beta.3",
+    "axios": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "@types/node": "^20.4.2"
+  }
+}
+
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "useUnknownInCatchVariables": false,
+    "lib": ["DOM", "ES2021"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}
+
+// README.md (typescript)
+/*
+1) cd typescript
+2) npm install
+3) create .env with VITE_API_BASE_URL
+4) npm run dev
+*/
+
+// src/main.tsx
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import './styles.css'
+
+createRoot(document.getElementById('root') as HTMLElement).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+)
+
+// src/App.tsx
+import React from 'react'
+import { Routes, Route, Link } from 'react-router-dom'
+import Login from './components/Login'
+import Signup from './components/Signup'
+import Verify from './components/Verify'
+import Dashboard from './components/Dashboard'
+
+export default function App(){
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white text-gray-900">
+      <header className="max-w-4xl mx-auto p-6 flex justify-between items-center">
+        <h1 className="text-2xl font-extrabold">School Portal</h1>
+        <nav className="space-x-4">
+          <Link to="/" className="hover:underline">Login</Link>
+          <Link to="/signup" className="hover:underline">Sign up</Link>
+        </nav>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-6">
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/verify" element={<Verify />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </main>
+
+      <footer className="text-center p-6 text-sm text-gray-500">
+        © School Portal • built with ❤️ • includes a tiny brain.js demo
+      </footer>
+    </div>
+  )
+}
+
+// src/services/api.ts
+import axios from 'axios'
+
+const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+
+const client = axios.create({
+  baseURL: BASE,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+export default client
+
+// src/types.d.ts
+export interface ApiResponse<T = any> {
+  success: boolean
+  message?: string
+  data?: T
+  token?: string
+}
+
+// src/components/Login.tsx
+import React, {useState} from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Login(){
+  const nav = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) =>{
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try{
+      const res = await api.post('/auth/signin', { email, password })
+      if(res.data?.token) localStorage.setItem('token', res.data.token)
+      nav('/dashboard')
+    }catch(err: any){
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false)}
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Student Login</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="you@school.edu" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input required type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="••••••••" />
+        </div>
+
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex items-center justify-between">
+          <button className="px-4 py-2 rounded bg-sky-600 text-white font-semibold" disabled={loading}>{loading? 'Signing...' : 'Sign in'}</button>
+          <a href="/signup" className="text-sm text-sky-600 hover:underline">Create account</a>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// src/components/Signup.tsx
+import React, {useState} from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Signup(){
+  const nav = useNavigate()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async (e: React.FormEvent) =>{
+    e.preventDefault()
+    setLoading(true); setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/signup', { email, password })
+      setMessage(res.data?.message || 'Account created')
+      nav('/verify', { state: { email } })
+    }catch(err: any){
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false) }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Create an account</h2>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium">School Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="student@school.edu" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input required minLength={6} type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="Create a password" />
+        </div>
+
+        {message && <div className="text-green-700 text-sm">{message}</div>}
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className="px-4 py-2 rounded bg-green-600 text-white font-semibold" disabled={loading}>{loading? 'Creating...' : 'Sign up'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// src/components/Verify.tsx
+import React, {useState} from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import api from '../services/api'
+
+export default function Verify(){
+  const loc = useLocation()
+  const nav = useNavigate()
+  const initialEmail = (loc.state as any)?.email || ''
+  const [email, setEmail] = useState(initialEmail)
+  const [code, setCode] = useState('')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const sendCode = async () =>{
+    setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/sendVerificationEmail', { email })
+      setMessage(res.data?.message || 'Code sent')
+    }catch(err: any){
+      setError(err.response?.data?.message || err.message)
+    }
+  }
+
+  const submit = async (e: React.FormEvent) =>{
+    e.preventDefault()
+    setLoading(true); setError(null); setMessage(null)
+    try{
+      const res = await api.post('/auth/verifyCode', { email, providedCode: code })
+      setMessage(res.data?.message || 'Verified')
+      nav('/')
+    }catch(err: any){
+      setError(err.response?.data?.message || err.message)
+    }finally{ setLoading(false) }
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6">
+      <h2 className="text-2xl font-semibold mb-4">Verify your account</h2>
+      <p className="text-sm text-gray-600">We sent a verification code to your school email. If you didn't receive it, you can resend.</p>
+
+      <form onSubmit={submit} className="space-y-4 mt-4">
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input required type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Verification Code</label>
+          <input required type="text" value={code} onChange={(e)=>setCode(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="6-digit code" />
+        </div>
+
+        {message && <div className="text-green-700 text-sm">{message}</div>}
+        {error && <div className="text-red-600 text-sm">{error}</div>}
+
+        <div className="flex justify-between items-center">
+          <button type="button" onClick={sendCode} className="px-3 py-2 rounded bg-yellow-500 text-white">Resend code</button>
+          <button className="px-4 py-2 rounded bg-sky-600 text-white" disabled={loading}>{loading? 'Verifying...' : 'Verify'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// src/components/Dashboard.tsx
+import React, {useEffect, useState} from 'react'
+import api from '../services/api'
+import BrainDemo from '../brainModel'
+
+export default function Dashboard(){
+  const [user, setUser] = useState<any | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const res = await api.get('/users');
+        setUser(res.data?.data?.[0] || null)
+      }catch(err: any){
+        setError(err.response?.data?.message || err.message)
+      }
+    })()
+  },[])
+
+  return (
+    <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow p-6 space-y-6">
+      <h2 className="text-2xl font-semibold">Dashboard</h2>
+      {error && <div className="text-red-600">{error}</div>}
+      <div>
+        <h3 className="font-medium">Welcome{user? `, ${user.email}` : ''}</h3>
+        <p className="text-sm text-gray-600">This is a simple student dashboard for a school-themed app.</p>
+      </div>
+
+      <section>
+        <h4 className="font-semibold mb-2">Tiny AI demo (brain.js)</h4>
+        <BrainDemo />
+      </section>
+
+      <div className="flex gap-3">
+        <button onClick={async ()=>{ await api.post('/auth/signout'); window.location.href='/' }} className="px-3 py-2 bg-red-500 text-white rounded">Sign out</button>
+      </div>
+    </div>
+  )
+}
+
+// src/brainModel.tsx
+import React, {useState} from 'react'
+import { NeuralNetwork } from 'brain.js'
+
+export default function BrainDemo(){
+  const [trained, setTrained] = useState(false)
+  const [result, setResult] = useState<any | null>(null)
+
+  const data = [
+    { input: { hours: 0 }, output: { fail: 1 } },
+    { input: { hours: 1 }, output: { fail: 1 } },
+    { input: { hours: 2 }, output: { pass: 1 } },
+    { input: { hours: 3 }, output: { pass: 1 } },
+    { input: { hours: 4 }, output: { pass: 1 } },
+    { input: { hours: 0.5 }, output: { fail: 1 } }
+  ]
+
+  const train = () =>{
+    const net = new NeuralNetwork({ hiddenLayers: [3] })
+    net.train(data, { log: false, iterations: 2000 })
+    const json = net.toJSON()
+    localStorage.setItem('school-ai-model', JSON.stringify(json))
+    setTrained(true)
+    alert('Model trained and saved locally. Try predictions below.')
+  }
+
+  const predict = (hours: number) =>{
+    const raw = localStorage.getItem('school-ai-model')
+    if(!raw){ alert('Train model first'); return }
+    const net = new NeuralNetwork()
+    net.fromJSON(JSON.parse(raw))
+    const out = net.run({ hours: Number(hours) })
+    setResult(out)
+  }
+
+  return (
+    <div className="p-4 border rounded space-y-3">
+      <div className="flex gap-2">
+        <button onClick={train} className="px-3 py-2 bg-indigo-600 text-white rounded">Train model</button>
+        <button onClick={()=>{ localStorage.removeItem('school-ai-model'); setTrained(false); setResult(null) }} className="px-3 py-2 bg-gray-200 rounded">Reset</button>
+      </div>
+
+      <div className="mt-2">
+        <label className="text-sm">Hours studied (0–6)</label>
+        <div className="flex gap-2 mt-1">
+          <input id="hoursInput" type="number" defaultValue={2} min={0} max={12} step={0.1} className="rounded border px-2 py-1" />
+          <button onClick={()=>predict(Number((document.getElementById('hoursInput') as HTMLInputElement).value))} className="px-3 py-2 bg-sky-600 text-white rounded">Predict</button>
+        </div>
+      </div>
+
+      {result && (
+        <div className="text-sm">Prediction: <strong>{result.pass > result.fail ? 'Likely to pass' : 'Likely to fail'}</strong> — raw: {JSON.stringify(result)}</div>
+      )}
+
+      <div className="text-xs text-gray-500">This is a toy demo of brain.js running in the browser. It trains on a tiny dataset and saves the model to localStorage.</div>
+    </div>
+  )
+}
+
+// src/styles.css (same as JS)
+:root{--bg:#f8fafc}
+body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:var(--bg); margin:0}
+@media (min-width:768px){
+  .max-w-4xl{max-width:64rem}
+  .max-w-3xl{max-width:48rem}
+  .max-w-2xl{max-width:36rem}
+}
+
+
+============================
+ENV & CORS NOTES
+============================
+- Set the frontend base URL with Vite env: `VITE_API_BASE_URL=http://localhost:5000/api`
+- Backend must allow CORS with credentials. Example (Express):
+  app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+- Backend routes (based on your controller):
+  POST /api/auth/signup
+  POST /api/auth/signin
+  POST /api/auth/sendVerificationEmail
+  POST /api/auth/verifyCode
+  POST /api/auth/signout
+  GET  /api/users
+
+
+============================
+NEXT STEPS I ALREADY DID FOR YOU
+============================
+- Created this complete scaffold with both JS and TS variants in this canvas document.
+- brain.js demo included and runs entirely client-side (no server code needed).
+

@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
-// import BrainDemo from '../brainModel';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -40,14 +39,18 @@ export default function Dashboard() {
   const handleSubmit = async e => {
     e.preventDefault();
     setActionError(null);
+    if (!user || !user._id) {
+      setActionError('You must be signed in to create a post.');
+      return;
+    }
     try {
       if (editingId) {
         const res = await api.put(`/posts/${editingId}`, form);
         setPosts(posts => posts.map(p => p._id === editingId ? res.data.data : p));
         setEditingId(null);
       } else {
-  const res = await api.post('/posts', { ...form, userId: user?._id });
-  setPosts([res.data.data, ...posts]);
+        const res = await api.post('/posts', { ...form });
+        setPosts([res.data.data, ...posts]);
       }
       setForm({ title: '', description: '' });
     } catch (err) {
@@ -74,16 +77,25 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <h2 className="dashboard-title">Dashboard</h2>
-      {error && <div className="form-message error">{error}</div>}
-      <div className="dashboard-welcome">
-        <h3 className="dashboard-username">Welcome{user ? `, ${user.email}` : ''}</h3>
-        <p className="dashboard-desc">This is your personalized student dashboard.</p>
-      </div>
+      <header style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16}}>
+        <h1 style={{fontSize: '2.6rem', fontWeight: 800, color: '#1e40af', letterSpacing: '-1px', margin: 0}}>Student Dashboard</h1>
+        <div className="dashboard-welcome" style={{marginTop: 8}}>
+          <h3 className="dashboard-username" style={{fontSize: '1.3rem', fontWeight: 700}}>
+            {user ? (
+              <>
+                Welcome, <span style={{color: '#2563eb', fontWeight: 800}}>{user.email}</span>
+              </>
+            ) : (
+              'Welcome!'
+            )}
+          </h3>
+          <p className="dashboard-desc" style={{fontSize: '1.08rem'}}>{user ? 'This is your personalized student dashboard.' : 'Please sign in to access your dashboard.'}</p>
+        </div>
+      </header>
 
-      <section className="dashboard-section">
-        <h4 className="dashboard-section-title">Social Feed</h4>
-        <form onSubmit={handleSubmit} className="post-form" style={{ marginBottom: 20 }}>
+      <section className="dashboard-section" style={{boxShadow: '0 2px 16px 0 rgba(37,99,235,0.07)', background: '#f1f5fa'}}>
+        <h2 className="dashboard-section-title" style={{fontSize: '1.25rem', color: '#2563eb', fontWeight: 700, marginBottom: 16, textAlign: 'center', letterSpacing: '-0.5px'}}>Social Feed</h2>
+        <form onSubmit={handleSubmit} className="post-form" style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input
             className="form-input"
             name="title"
@@ -91,7 +103,7 @@ export default function Dashboard() {
             value={form.title}
             onChange={handleChange}
             required
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 6, fontWeight: 600, fontSize: '1.05rem' }}
           />
           <textarea
             className="form-input"
@@ -101,34 +113,34 @@ export default function Dashboard() {
             onChange={handleChange}
             required
             rows={3}
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 6, fontSize: '1.01rem' }}
           />
-          <div className="form-actions">
+          <div className="form-actions" style={{justifyContent: 'space-between'}}>
             {editingId && (
-              <button type="button" className="form-button" onClick={() => { setEditingId(null); setForm({ title: '', description: '' }); }}>Cancel</button>
+              <button type="button" className="form-button" style={{background: '#64748b'}} onClick={() => { setEditingId(null); setForm({ title: '', description: '' }); }}>Cancel</button>
             )}
-            <button type="submit" className="form-button">
+            <button type="submit" className="form-button" style={{minWidth: 100}}>
               {editingId ? 'Update' : 'Post'}
             </button>
           </div>
           {actionError && <div className="form-message error">{actionError}</div>}
         </form>
         {loading ? (
-          <div>Loading feed...</div>
+          <div style={{textAlign: 'center', color: '#64748b'}}>Loading feed...</div>
         ) : (
-          <div className="feed-list">
-            {posts.length === 0 && <div>No posts yet.</div>}
+          <div className="feed-list" style={{marginTop: 8}}>
+            {posts.length === 0 && <div style={{textAlign: 'center', color: '#64748b'}}>No posts yet.</div>}
             {posts.map(post => (
-              <div key={post._id} className="feed-post" style={{ background: '#f9fafb', borderRadius: 8, padding: 14, marginBottom: 12, boxShadow: '0 1px 4px #e5e7eb' }}>
-                <div style={{ fontWeight: 600, fontSize: 16 }}>{post.title}</div>
-                <div style={{ margin: '6px 0 10px 0', color: '#334155' }}>{post.description}</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>
-                  Posted {new Date(post.createdAt).toLocaleString()} by {post.userId?.email || 'Unknown'}
+              <div key={post._id} className="feed-post" style={{ background: '#fff', borderRadius: 10, padding: 18, marginBottom: 16, boxShadow: '0 1px 6px #e5e7eb', borderLeft: '4px solid #2563eb' }}>
+                <div style={{ fontWeight: 700, fontSize: 17, color: '#1e293b', marginBottom: 4 }}>{post.title}</div>
+                <div style={{ margin: '6px 0 10px 0', color: '#334155', fontSize: 15 }}>{post.description}</div>
+                <div style={{ fontSize: 12.5, color: '#64748b', marginBottom: 4 }}>
+                  Posted {new Date(post.createdAt).toLocaleString()} by <span style={{color: '#2563eb', fontWeight: 600}}>{post.userId?.email || 'Unknown'}</span>
                 </div>
                 {user && post.userId && post.userId._id === user._id && (
-                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                    <button className="form-button" style={{ padding: '4px 12px', fontSize: 13 }} onClick={() => handleEdit(post)}>Edit</button>
-                    <button className="form-button" style={{ padding: '4px 12px', fontSize: 13, background: '#ef4444' }} onClick={() => handleDelete(post._id)}>Delete</button>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 10 }}>
+                    <button className="form-button" style={{ padding: '4px 14px', fontSize: 13, background: '#fbbf24', color: '#1e293b' }} onClick={() => handleEdit(post)}>Edit</button>
+                    <button className="form-button" style={{ padding: '4px 14px', fontSize: 13, background: '#ef4444' }} onClick={() => handleDelete(post._id)}>Delete</button>
                   </div>
                 )}
               </div>
@@ -137,15 +149,14 @@ export default function Dashboard() {
         )}
       </section>
 
-
-
-      <div className="dashboard-actions">
+      <div className="dashboard-actions" style={{marginTop: 24}}>
         <button
           onClick={async () => {
             await api.post('/auth/signout');
             window.location.href = '/';
           }}
           className="dashboard-signout"
+          style={{fontWeight: 700, fontSize: '1.08rem', padding: '12px 28px', borderRadius: 8, boxShadow: '0 1px 4px #e5e7eb'}}
         >
           Sign out
         </button>

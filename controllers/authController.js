@@ -55,37 +55,36 @@ export const signup = async (req, res) => {
 
       const existingUser = await User.findOne({email}).select("+password");
       if(!existingUser){
-        return res
-        .status(401)
-        .json({success:false, message: "User does not exist"});
-
-      };
-        const result = await doHashValidation(password, existingUser.password);
-        if(!result){
-          return res.status(401).json({success:false, message: "Invalid password"});
-        };
-
+        return res.status(401).json({success:false, message: "User does not exist"});
+      }
+      if (!existingUser.verified) {
+        return res.status(401).json({success:false, message: "Please verify your email before signing in."});
+      }
+      const result = await doHashValidation(password, existingUser.password);
+      if(!result){
+        return res.status(401).json({success:false, message: "Invalid password"});
+      }
       const token = jwt.sign({
         email: existingUser.email,
         id: existingUser._id, 
         verified: existingUser.verified
-      
       },process.env.TOKEN_SECRET, {
         expiresIn: "8h"
       });
-      
-      
-       res.cookie(
-         'Authorization', 'Bearer' 
-         + token ,{expires : new Date(Date.now() + 8 * 3600000),
-          httpOnly: process.env.NODE_ENV === 'production',
-          secure: process.env.NODE_ENV === 'production'
-      }).json({success:true, data: existingUser, token: token, message: "User logged in successfully"});
-     
-  
+      res.cookie(
+        'Authorization', 'Bearer ' + token,
+        {
+          expires: new Date(Date.now() + 8 * 3600000),
+          httpOnly: false, // allow JS access for dev
+          secure: false,   // allow non-https for dev
+          sameSite: 'lax',
+          path: '/',
+        }
+      );
+      existingUser.password = undefined;
+      res.status(200).json({success:true, data: existingUser, token: token, message: "User logged in successfully"});
    } catch (error) {
      return res.status(500).json({ error: error.message });
-   
    }
  }
 
@@ -107,9 +106,8 @@ export const signout = async (req, res) => {
 
   if(!existingUser){
     return res
-    .status(404)
-    .json({success:false, message: email,message: "User does not exist"});
-
+      .status(404)
+      .json({success:false, message: "User does not exist"});
   }
   if(existingUser.verified){
     return res
@@ -197,7 +195,7 @@ export const verifyCode = async (req, res) => {
     return res.status(200).json({success:true, message:'Your account has been verified'});
 
   }
-  return res.status(400).res({success:false, message:'Unexpected error occured!'})
+  return res.status(400).json({success:false, message:'Unexpected error occured!'})
 
  }catch(error){
      console.log(error);
@@ -210,11 +208,31 @@ export const verifyCode = async (req, res) => {
 
 export const getSignedInUser = async (req, res) => {
   try {
-    const users = await User.find({});
-    res.status(200).json({ success: true, data: users });
+    // Try to get token from cookie or header
+    let token;
+    if (req.cookies && req.cookies.Authorization && req.cookies.Authorization.startsWith('Bearer ')) {
+      token = req.cookies.Authorization.replace('Bearer ', '');
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.replace('Bearer ', '');
+    }
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+    } catch (err) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    }
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    user.password = undefined;
+    res.status(200).json({ success: true, data: user });
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({ success: false, message: "Server has an Error", error: error.message });
+    console.error('Error fetching signed-in user:', error);
+    res.status(500).json({ success: false, message: 'Server has an Error', error: error.message });
   }
 };
 
@@ -326,8 +344,8 @@ export const adminSignout = async (req, res) => {
 export default {
   //user
   signup,
- signin,
- signout,
+  signin,
+  signout,
   sendVerificationEmail,
   verifyCode,
   getSignedInUser,
@@ -337,6 +355,5 @@ export default {
   adminLogin,
   adminSignup,
   adminSignout
-
 };
 

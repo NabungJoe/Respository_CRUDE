@@ -10,17 +10,22 @@ export default function Signup(){
   const [message, setMessage] = useState(null)
   const [error, setError] = useState(null)
 
-  const submit = async (e) =>{
-    e.preventDefault()
-    setLoading(true); setError(null); setMessage(null)
-    try{
-      const res = await api.post('/auth/signup', { email, password })
-      setMessage(res.data?.message || 'Account created')
-      nav('/verify', { state: { email } })
-    }catch(err){
-      setError(err.response?.data?.message || err.message)
-    }finally{ setLoading(false) }
-  }
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError(null); setMessage(null);
+    try {
+      const res = await api.post('/auth/signup', { email, password });
+      setMessage('Account created! Please check your email for a verification code.');
+      setTimeout(() => nav('/verify', { state: { email } }), 1200);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  console.log(import.meta.env.VITE_API_URL)
 
   return (
     <div className="form-container">

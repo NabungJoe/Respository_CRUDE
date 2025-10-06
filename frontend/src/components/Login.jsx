@@ -9,21 +9,28 @@ export default function Login(){
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const handleSubmit = async (e) =>{
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-    try{
-      const res = await api.post('/auth/signin', { email, password })
-      console.log('login success', res.data)
-      // store token client-side if provided (optional), backend already sets cookie
-      if(res.data?.token) localStorage.setItem('token', res.data.token)
-      nav('/dashboard')
-    }catch(err){
-      console.error(err)
-      setError(err.response?.data?.message || err.message)
-    }finally{ setLoading(false)}
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/signin', { email, password });
+      if (res.data?.data?.verified) {
+        nav('/dashboard');
+      } else {
+        nav('/verify', { state: { email } });
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      if (msg.toLowerCase().includes('verify')) {
+        nav('/verify', { state: { email } });
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="form-container">

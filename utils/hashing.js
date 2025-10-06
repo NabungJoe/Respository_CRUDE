@@ -13,7 +13,9 @@ export const doHashValidation = (value, hashedValue)=>{
 };
 
 export const hmacProcess = (value, key)=>{
-    const result = crypto.createHmac('sha256', key).update(value).digest('hex');
+    const result2 = crypto.createHmac('sha256', key).update(value).digest('hex');
+    const result = crypto.createHmac('sha256', key).update(value).digest('base64');
+
     return result;
 }
 

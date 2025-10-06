@@ -1,38 +1,55 @@
-import React, {useState} from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import api from '../services/api.js'
 
-export default function Verify(){
-  const loc = useLocation()
-  const nav = useNavigate()
-  const initialEmail = loc.state?.email || ''
-  const [email, setEmail] = useState(initialEmail)
-  const [code, setCode] = useState('')
-  const [message, setMessage] = useState(null)
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import api from '../services/api.js';
 
-  const sendCode = async () =>{
-    setError(null); setMessage(null)
-    try{
-  const res = await api.patch('/auth/send-verification-code', { email })
-      setMessage(res.data?.message || 'Code sent')
-    }catch(err){
-      setError(err.response?.data?.message || err.message)
+export default function Verify() {
+  const loc = useLocation();
+  const nav = useNavigate();
+  const initialEmail = loc.state?.email || '';
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState('');
+  const [message, setMessage] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // If already verified, redirect to dashboard
+  useEffect(() => {
+    (async () => {
+      if (!email) return;
+      try {
+        // Try to get user by email (backend getUser expects id, so fallback to getSignedInUser if needed)
+        const res = await api.get('/auth/getSignedInUser');
+        if (res.data?.data?.verified) {
+          nav('/dashboard');
+        }
+      } catch {}
+    })();
+  }, [email, nav]);
+
+  const sendCode = async () => {
+    setError(null); setMessage(null);
+    try {
+      const res = await api.patch('/auth/send-verification-code', { email });
+      setMessage('Verification code sent! Please check your email.');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
     }
-  }
+  };
 
-  const submit = async (e) =>{
-    e.preventDefault()
-    setLoading(true); setError(null); setMessage(null)
-    try{
-  const res = await api.patch('/auth/verifyCode', { email, providedCode: code })
-      setMessage(res.data?.message || 'Verified')
-      nav('/')
-    }catch(err){
-      setError(err.response?.data?.message || err.message)
-    }finally{ setLoading(false) }
-  }
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true); setError(null); setMessage(null);
+    try {
+      const res = await api.patch('/auth/verifyCode', { email, providedCode: code });
+      setMessage('Your account is verified! You can now sign in.');
+      setTimeout(() => nav('/'), 1200);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="form-container">

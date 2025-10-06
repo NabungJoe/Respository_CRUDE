@@ -17,7 +17,10 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 dotenv.config();
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: [
+        'http://localhost:5173', // Vite dev
+        'http://localhost:3000', // Backend (if frontend served from here)
+    ],
     credentials: true
 }));
 app.use(cookieParser());

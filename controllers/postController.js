@@ -4,18 +4,12 @@ import User from '../models/usersModel.js';
 // Create a new post
 export const createPost = async (req, res) => {
   try {
-    const { title, description, userId } = req.body;
+    const { title, description } = req.body;
     if (!title || !description) {
       return res.status(400).json({ message: 'Title and description are required.' });
     }
-    if (!userId) {
-      return res.status(400).json({ message: 'User is required.' });
-    }
-    // Optionally, check if user exists
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
+    // req.user is set by requireUser middleware
+    const userId = req.user._id;
     const post = await Post.create({ title, description, userId });
     // Populate user email for response
     const populated = await Post.findById(post._id).populate('userId', 'email');

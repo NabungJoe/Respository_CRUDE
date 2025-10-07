@@ -47,7 +47,7 @@ export default function Dashboard() {
       if (editingId) {
         const res = await api.put(`/posts/${editingId}`, form);
         setPosts(posts => posts.map(p => p._id === editingId ? res.data.data : p));
-        setEditingId(null);
+        setEditingId(null); 
       } else {
         const res = await api.post('/posts', { ...form });
         setPosts([res.data.data, ...posts]);
